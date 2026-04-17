@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: codepilot-ai-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm run dev
+    plan: free
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: PORT
+        value: 10000
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

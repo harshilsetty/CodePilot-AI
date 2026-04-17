@@ -92,8 +92,16 @@ Detailed API schema: docs/API.md
 - Metrics and checks: [docs/METRICS_QUALITY.md](docs/METRICS_QUALITY.md)
 - Release readiness checklist: [docs/RELEASE_READINESS_CHECKLIST.md](docs/RELEASE_READINESS_CHECKLIST.md)
 - Operational runbook: [docs/OPERATIONAL_RUNBOOK.md](docs/OPERATIONAL_RUNBOOK.md)
+- Deployment guide: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
-## 8. UI/UX Screenshots
+## 8. Deploy Prototype
+For an internet-accessible prototype, use:
+- Backend: Render
+- Frontend: Vercel
+
+Full setup steps: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+
+## 9. UI/UX Screenshots
 Add product screenshots to `docs/screenshots/` and update filenames below as needed.
 
 <table>
