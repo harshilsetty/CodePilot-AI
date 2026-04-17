@@ -8,6 +8,13 @@ export default {
   theme: {
     extend: {
       colors: {
+        // New SaaS Premium Palette
+        "bg-primary": "#0B0F14",
+        "bg-secondary": "#111827",
+        "accent-green": "#3B82F6",
+        "accent-cyan": "#06B6D4",
+        "text-primary": "#E5E7EB",
+        "text-secondary": "#9CA3AF",
         "surface-container-low": "#1a1c1f",
         "on-surface": "#e2e2e6",
         "on-secondary-container": "#00311f",
@@ -63,6 +70,21 @@ export default {
         "mono": ["Fira Code"]
       },
       borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+      backgroundImage: {
+        'gradient-soft-green': 'linear-gradient(135deg, rgba(59, 130, 246, 0.16) 0%, rgba(6, 182, 212, 0.08) 100%)',
+        'gradient-soft-blue': 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+        'gradient-dark': 'linear-gradient(160deg, #0f172a 0%, #0b1020 45%, #0a0f1d 100%)',
+      },
+      boxShadow: {
+        'soft': '0 4px 20px rgba(0, 0, 0, 0.15)',
+        'soft-sm': '0 2px 8px rgba(0, 0, 0, 0.1)',
+        'glow-green': '0 0 24px rgba(59, 130, 246, 0.25)',
+        'glow-blue': '0 0 20px rgba(59, 130, 246, 0.15)',
+        'glow-cyan': '0 0 20px rgba(6, 182, 212, 0.2)',
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
     },
   },
   plugins: [
