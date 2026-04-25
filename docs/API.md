@@ -3,7 +3,7 @@
 Base URL (local): http://localhost:3000
 
 ## 1. POST /api/auth/register
-Create a new user account.
+Start signup by generating and sending an OTP for verification.
 
 Request body:
 ```json
@@ -11,6 +11,34 @@ Request body:
   "email": "student@example.com",
   "password": "secret123",
   "displayName": "Student"
+}
+```
+
+Success 200:
+```json
+{
+  "message": "OTP sent to your email. Please verify to complete signup.",
+  "expiresInSeconds": 300
+}
+```
+
+Notes:
+- OTP expiry is 5 minutes.
+- OTP is delivered using SMTP configuration from backend environment variables.
+
+Errors:
+- 400 invalid input
+- 409 account exists
+- 500 server error
+
+## 2. POST /api/auth/register/verify-otp
+Complete signup using email + OTP.
+
+Request body:
+```json
+{
+  "email": "student@example.com",
+  "otp": "123456"
 }
 ```
 
@@ -29,11 +57,12 @@ Success 201:
 ```
 
 Errors:
-- 400 invalid input
+- 400 invalid input, missing pending signup, or expired OTP
+- 401 invalid OTP
 - 409 account exists
 - 500 server error
 
-## 2. POST /api/auth/login
+## 3. POST /api/auth/login
 Authenticate existing user.
 
 Request body:
@@ -46,7 +75,7 @@ Request body:
 
 Success 200: same response shape as register.
 
-## 3. POST /api/chat
+## 4. POST /api/chat
 Chat coaching endpoint.
 
 Request body:
@@ -69,7 +98,7 @@ Success 200:
 }
 ```
 
-## 4. POST /api/mock
+## 5. POST /api/mock
 Initialize mock interview with resume.
 
 Request type:
@@ -84,7 +113,7 @@ Success 200:
 }
 ```
 
-## 5. POST /api/practice
+## 6. POST /api/practice
 Generate practice question.
 
 Request body:
@@ -113,7 +142,7 @@ Success 200 (Coding):
 }
 ```
 
-## 6. POST /api/practice/evaluate
+## 7. POST /api/practice/evaluate
 Evaluate practice answer.
 
 Request body:
@@ -132,5 +161,5 @@ Success 200:
 }
 ```
 
-## 7. Auth Header
+## 8. Auth Header
 Frontend sets Authorization: Bearer <token> via axios interceptor in api/client.js.

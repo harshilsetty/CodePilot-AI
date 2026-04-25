@@ -22,6 +22,8 @@ function ChatWindow({
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [loadingText, setLoadingText] = useState('🧠 Evaluating your answer...');
+  const [isListening, setIsListening] = useState(false);
+  const [isVoiceReplyEnabled, setIsVoiceReplyEnabled] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -83,6 +85,22 @@ function ChatWindow({
         nextReply = nextReply.replace(/\[SCORE:\s*\d+\]/i, '').trim();
       }
 
+      const cleanReply = nextReply.replace(/\*\*/g, '').replace(/\n/g, ' ');
+
+      if (isVoiceReplyEnabled && 'speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(cleanReply);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        if (isMock && mockContext?.interviewerStyle === 'Hostile') {
+          utterance.pitch = 0.8;
+          utterance.rate = 1.1;
+        } else if (isMock && mockContext?.interviewerStyle === 'Friendly') {
+          utterance.pitch = 1.2;
+          utterance.rate = 0.95;
+        }
+        window.speechSynthesis.speak(utterance);
+      }
+
       setMessages((prev) => [...prev, { role: 'assistant', content: nextReply }]);
     } catch (error) {
       console.error('Error fetching chat response:', error);
@@ -101,12 +119,57 @@ function ChatWindow({
     await sendPresetMessage(input, '🧠 Evaluating your answer...');
   };
 
+  const toggleListening = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript) {
+         setInput((prev) => (prev ? prev + ' ' : '') + finalTranscript);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error', event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
+
   return (
     <main className="ml-64 flex-1 flex flex-col relative bg-bg-primary overflow-hidden text-text-primary h-screen">
       <header className="flex justify-between items-center w-full px-6 py-4 bg-bg-secondary z-10 shrink-0 border-b border-text-secondary/10">
         <div className="flex items-center space-x-6 min-w-0">
           <div>
-            <h1 className="text-text-primary font-['Space_Grotesk'] font-bold tracking-tight text-2xl">CodePilot AI</h1>
+            <h1 className="text-text-primary font-['Space_Grotesk'] font-bold tracking-tight text-2xl">PrepPilot AI</h1>
             <div className="mt-1.5 flex items-center gap-2">
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isMock ? 'bg-blue-500/10 text-blue-300 border-blue-500/30 shadow-glow-blue' : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30 shadow-glow-cyan'}`}>
                 {modeLabel}
@@ -170,7 +233,7 @@ function ChatWindow({
             <h2 className="font-['Space_Grotesk'] text-2xl sm:text-3xl text-text-primary font-semibold">
               Hello {username || 'there'}! Ready to crack interviews?
             </h2>
-            <p className="text-text-secondary/70">Start with a quick action and CodePilot will guide your next step.</p>
+            <p className="text-text-secondary/70">Start with a quick action and PrepPilot will guide your next step.</p>
             <div className="flex flex-wrap justify-center gap-3">
               <button onClick={() => setCurrentView?.('mockSetup')} className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-accent-green to-accent-cyan text-bg-primary font-semibold transition-smooth duration-200 shadow-soft hover:shadow-glow-green">
                 Start Mock Interview
@@ -263,25 +326,52 @@ function ChatWindow({
               Practice DSA
             </button>
           </div>
-          <div className="relative glass-effect rounded-xl flex items-center p-2 shadow-soft">
-            <input 
-              className="flex-1 bg-transparent border-none focus:ring-0 text-text-primary placeholder:text-text-secondary/50 text-sm py-3 px-4 outline-none" 
-              placeholder={inputPlaceholder}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              disabled={isLoading}
-            />
-             <div className="flex items-center space-x-2 pr-2">
-              <button 
-                type="submit" 
-                disabled={isLoading || !input.trim()}
-                className="bg-gradient-to-r from-accent-green to-accent-cyan text-bg-primary p-2.5 rounded-lg shadow-soft shadow-accent-green/30 active:scale-95 duration-150 flex items-center justify-center disabled:opacity-50 hover:shadow-glow-green transition-smooth"
-              >
-                <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>send</span>
-              </button>
+          <div className="relative glass-effect rounded-xl flex flex-col p-2 shadow-soft transition-all ring-1 focus-within:ring-blue-400/50 ring-text-secondary/10">
+            {/* Top Toolbar line (Voice Toggles & Hints) */}
+            <div className="flex justify-between items-center px-2 pt-1 pb-2 border-b border-white/5 mb-1">
+               <button 
+                  type="button"
+                  onClick={() => {
+                     setIsVoiceReplyEnabled(!isVoiceReplyEnabled);
+                     if (isVoiceReplyEnabled) window.speechSynthesis.cancel();
+                  }}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors ${isVoiceReplyEnabled ? 'text-accent-cyan bg-accent-cyan/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
+               >
+                 <span className="material-symbols-outlined text-sm">{isVoiceReplyEnabled ? 'volume_up' : 'volume_off'}</span>
+                 <span>AI Voice {isVoiceReplyEnabled ? 'ON' : 'OFF'}</span>
+               </button>
+               <span className="text-[10px] text-slate-500 uppercase tracking-widest">{isListening ? '🎙️ Listening...' : 'Enter your submission'}</span>
+            </div>
+
+            <div className="flex items-center">
+              <input 
+                className="flex-1 bg-transparent border-none focus:ring-0 text-text-primary placeholder:text-text-secondary/50 text-sm py-2 px-4 outline-none" 
+                placeholder={isListening ? "Listening to your voice..." : inputPlaceholder}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                disabled={isLoading}
+              />
+               <div className="flex items-center space-x-2 pr-2">
+                <button 
+                  type="button" 
+                  onClick={toggleListening}
+                  disabled={isLoading}
+                  className={`p-2.5 rounded-lg active:scale-95 duration-150 flex items-center justify-center transition-smooth ${isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-bg-secondary text-text-secondary hover:text-text-primary hover:bg-white/5'}`}
+                  title="Voice Typing (Dictation)"
+                >
+                  <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>mic</span>
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isLoading || !input.trim()}
+                  className="bg-gradient-to-r from-accent-green to-accent-cyan text-bg-primary p-2.5 rounded-lg shadow-soft shadow-accent-green/30 active:scale-95 duration-150 flex items-center justify-center disabled:opacity-50 hover:shadow-glow-green transition-smooth"
+                >
+                  <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>send</span>
+                </button>
+              </div>
             </div>
           </div>
-          <p className="text-center text-xs text-text-secondary/60">Powered by Generative AI • CodePilot AI v2.0</p>
+          <p className="text-center text-xs text-text-secondary/60">Powered by Generative AI • PrepPilot AI v2.0</p>
         </form>
       </div>
 

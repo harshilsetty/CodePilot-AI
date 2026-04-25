@@ -20,7 +20,24 @@
     "name": "Harshil Somisetty",
     "email": "harshilsetty2006@gmail.com",
     "passwordHash": "$2a$10$.knNHfvAfSUdGWbvdZ/0sugHP6MDgdZgsgswqYHCUAAAkJwRKBf76",
-    "picture": "https://ui-avatars.com/api/?name=Harshil%20Somisetty&background=random",
-    "createdAt": "2026-04-17T07:10:19.147Z"
+    "picture": "https://lh3.googleusercontent.com/a/ACg8ocIdlN_D4JP9KW0ZlerqFXz8c43Syx6g2lGzPG9wymKgmlIEGpJr=s96-c",
+    "createdAt": "2026-04-17T07:10:19.147Z",
+    "googleId": "104777628876293782667"
+  },
+  {
+    "id": "1776848097145",
+    "name": "TEST",
+    "email": "meemeeh1234@gmail.com",
+    "passwordHash": "$2a$10$zF/rpfs4eEfJZ.02Ma6lFeU2TyFc/wllWHKX5knWh3ZfrasoxZQLe",
+    "picture": "https://ui-avatars.com/api/?name=TEST&background=random",
+    "createdAt": "2026-04-22T08:54:57.145Z"
+  },
+  {
+    "id": "google-113201752653861756905",
+    "name": "The H S",
+    "email": "hharshil69@gmail.com",
+    "picture": "https://lh3.googleusercontent.com/a/ACg8ocLBg1OEOYtuZeH8Z9VvYgIgvL2jYQ9beXoJ-GjX9JsrMDeJjEWg=s96-c",
+    "googleId": "113201752653861756905",
+    "createdAt": "2026-04-22T09:09:50.459Z"
   }
 ]

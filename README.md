@@ -52,6 +52,12 @@ docs/
   GEMINI_API_KEY=your_key_here
   JWT_SECRET=your_secret_here
   PORT=3000
+  SMTP_HOST=smtp.gmail.com
+  SMTP_PORT=587
+  SMTP_SECURE=false
+  SMTP_USER=your_email@gmail.com
+  SMTP_PASS=your_app_password
+  SMTP_FROM=CodePilot AI <your_email@gmail.com>
 4. Run:
   npm run dev
 

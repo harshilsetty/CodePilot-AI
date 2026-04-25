@@ -41,6 +41,9 @@ Set Render env var:
 If multiple domains are needed, use comma-separated values:
 - `CORS_ORIGINS=https://app.example.com,https://staging.example.com`
 
+For Vercel preview deployments, wildcard origins are supported:
+- `CORS_ORIGINS=https://<your-prod-vercel-url>,*.vercel.app`
+
 Redeploy backend after CORS update.
 
 ## 4. Post-Deploy Verification

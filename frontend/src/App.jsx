@@ -7,6 +7,13 @@ import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 import Profile from './components/Profile';
 
+const formatDateKeyLocal = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getHistoryStorageKey = (user) => {
   const identifier = user?.id || user?.email;
   return identifier ? `chatHistory:${identifier}` : null;
@@ -114,19 +121,17 @@ function App() {
       if (savedStreak.lastActiveDate) {
          const diffTime = today - savedStreak.lastActiveDate;
          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-         if (diffDays === 1) {
-            currentStreak += 1;
-         } else if (diffDays > 1) {
-            currentStreak = 1;
+         if (diffDays > 1) {
+            currentStreak = 0;
          }
-      } else {
-         currentStreak = 1; // First time
       }
       
       setStreak(currentStreak);
-      localStorage.setItem(streakKey, JSON.stringify({ count: currentStreak, lastActiveDate: today }));
+      if (currentStreak !== savedStreak.count) {
+          localStorage.setItem(streakKey, JSON.stringify({ ...savedStreak, count: currentStreak }));
+      }
     } catch (e) {
-      setStreak(1);
+      setStreak(0);
     }
 
     setMessages([]);
@@ -223,11 +228,31 @@ function App() {
       return newStats;
     });
 
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = formatDateKeyLocal(new Date());
     setActivityMap(prev => {
       const updated = { ...prev, [dateStr]: (prev[dateStr] || 0) + 1 };
       localStorage.setItem(`activity:${identifier}`, JSON.stringify(updated));
       return updated;
+    });
+
+    const today = new Date().setHours(0, 0, 0, 0);
+    setStreak(prev => {
+      const savedStreak = JSON.parse(localStorage.getItem(`streak:${identifier}`) || '{}');
+      let newStreak = prev;
+      if (savedStreak.lastActiveDate) {
+         const diffTime = today - savedStreak.lastActiveDate;
+         const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+         if (diffDays === 1) {
+            newStreak += 1;
+         } else if (diffDays > 1) {
+            newStreak = 1;
+         }
+         // If diffDays === 0, streak does not change
+      } else {
+         newStreak = 1; 
+      }
+      localStorage.setItem(`streak:${identifier}`, JSON.stringify({ count: newStreak, lastActiveDate: today }));
+      return newStreak;
     });
   };
 
@@ -304,7 +329,7 @@ function App() {
         />
       )}
       {currentView === 'practice' && (
-        <PracticeMode />
+        <PracticeMode completeSession={completeSession} />
       )}
       {currentView === 'profile' && (
         <Profile user={user} streak={streak} performanceStats={performanceStats} activityMap={activityMap} />

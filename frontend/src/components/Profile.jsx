@@ -1,5 +1,17 @@
 import React, { useMemo, useState } from 'react';
 
+const formatDateKeyLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateKeyLocal = (dateKey) => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+};
+
 function Profile({ user, streak, performanceStats, activityMap = {} }) {
   const [hoveredCell, setHoveredCell] = useState(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
@@ -10,57 +22,75 @@ function Profile({ user, streak, performanceStats, activityMap = {} }) {
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
   const sessionsThisWeek = activityDates.reduce((total, date) => {
-    const dt = new Date(date);
+    const dt = parseDateKeyLocal(date);
     return dt >= startOfWeek ? total + (activityMap[date] || 0) : total;
   }, 0);
 
   const sessionsThisMonth = activityDates.reduce((total, date) => {
-    const dt = new Date(date);
+    const dt = parseDateKeyLocal(date);
     return dt >= startOfMonth ? total + (activityMap[date] || 0) : total;
   }, 0);
 
   const activeDays = activityDates.length;
   const lastActiveDate = activityDates[0] || 'No activity yet';
 
-  const yearlyColumns = useMemo(() => {
-    const totalDays = 371; // 53 weeks for a full-year style calendar map
-    const startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
-    startDate.setDate(startDate.getDate() - totalDays + 1);
+  const calendarMonths = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const columns = [];
-    for (let week = 0; week < 53; week++) {
-      const weekCells = [];
-      for (let day = 0; day < 7; day++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + week * 7 + day);
-        const dateStr = date.toISOString().split('T')[0];
-        weekCells.push({
-          date: dateStr,
-          weekday: date.toLocaleDateString(undefined, { weekday: 'long' }),
-          displayDate: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
-          monthName: date.toLocaleDateString(undefined, { month: 'short' }),
-          count: activityMap[dateStr] || 0,
-        });
-      }
-      columns.push(weekCells);
+    const pastYearStart = new Date(today.getFullYear() - 1, today.getMonth() + 1, 1);
+    
+    const months = [];
+    let currentMonth = new Date(pastYearStart);
+    
+    for (let i = 0; i < 12; i++) {
+       const year = currentMonth.getFullYear();
+       const monthIndex = currentMonth.getMonth();
+       
+       const monthName = currentMonth.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+       
+       const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+       const startDayOfWeek = new Date(year, monthIndex, 1).getDay(); // 0 = Sunday
+       
+       const weeks = [];
+       let currentWeek = Array(7).fill(null);
+       let dayOfWeek = startDayOfWeek;
+       
+       for (let day = 1; day <= daysInMonth; day++) {
+          const cellDate = new Date(year, monthIndex, day);
+          const dateStr = formatDateKeyLocal(cellDate);
+          const isFuture = cellDate > today;
+          
+          currentWeek[dayOfWeek] = {
+             date: dateStr,
+             dayNumber: day,
+             weekday: cellDate.toLocaleDateString(undefined, { weekday: 'long' }),
+             displayDate: cellDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+             count: activityMap[dateStr] || 0,
+             isFuture,
+          };
+          
+          dayOfWeek++;
+          if (dayOfWeek > 6) {
+             weeks.push(currentWeek);
+             currentWeek = Array(7).fill(null);
+             dayOfWeek = 0;
+          }
+       }
+       if (dayOfWeek > 0) {
+          weeks.push(currentWeek);
+       }
+       
+       months.push({
+          name: monthName,
+          weeks
+       });
+       
+       currentMonth.setMonth(currentMonth.getMonth() + 1);
     }
-    return columns;
+    
+    return months;
   }, [activityMap]);
-
-  const monthLabels = useMemo(() => {
-    const labels = [];
-    let prevMonth = '';
-    yearlyColumns.forEach((weekCells, idx) => {
-      const firstDay = weekCells[0];
-      if (!firstDay) return;
-      if (firstDay.monthName !== prevMonth) {
-        labels.push({ index: idx, month: firstDay.monthName });
-        prevMonth = firstDay.monthName;
-      }
-    });
-    return labels;
-  }, [yearlyColumns]);
 
   const getStreakCellClass = (count) => {
     if (count === 0) return 'bg-bg-secondary border border-text-secondary/20';
@@ -88,12 +118,12 @@ function Profile({ user, streak, performanceStats, activityMap = {} }) {
           <div className="w-24 h-24 rounded-2xl bg-gradient-soft-green flex items-center justify-center shadow-glow-blue border border-blue-400/30 z-10 shrink-0">
             <span className="material-symbols-outlined text-blue-300 text-5xl">person</span>
           </div>
-          <div className="z-10">
-            <h2 className="text-3xl font-bold">{user?.name}</h2>
+          <div className="z-10" style={{ perspective: '1000px' }}>
+            <h2 className="text-3xl font-bold name-3d-animated pb-1">{user?.name}</h2>
             <p className="text-text-secondary mt-1">{user?.email}</p>
             <div className="mt-4 flex gap-3">
               <span className="px-3 py-1 text-xs font-bold uppercase tracking-widest bg-blue-500/10 text-blue-300 rounded-full border border-blue-500/30">
-                CodePilot Learner
+                PrepPilot Learner
               </span>
               <span className="px-3 py-1 text-xs font-bold uppercase tracking-widest bg-orange-500/10 text-orange-400 rounded-full border border-orange-500/30 flex items-center gap-1">
                 🔥 {streak} Day Streak
@@ -169,39 +199,41 @@ function Profile({ user, streak, performanceStats, activityMap = {} }) {
                 </div>
               )}
 
-              <div className="ml-8 mb-2 flex h-4 min-w-max relative">
-                {monthLabels.map((label) => (
-                  <span
-                    key={`${label.month}-${label.index}`}
-                    className="absolute text-[10px] text-text-secondary/80"
-                    style={{ left: `${label.index * 14}px` }}
-                  >
-                    {label.month}
-                  </span>
+              <div className="flex gap-6 overflow-x-auto custom-scrollbar pb-4" onMouseMove={handleCellMouseMove}>
+                {calendarMonths.map((month, mIdx) => (
+                   <div key={`month-${mIdx}`} className="flex flex-col gap-1.5 min-w-max">
+                      <div className="text-xs font-bold text-text-secondary text-center mb-1">{month.name}</div>
+                      <div className="flex gap-1.5 justify-between text-[10px] text-text-secondary/80 pb-1">
+                         <span className="w-4 text-center">S</span>
+                         <span className="w-4 text-center">M</span>
+                         <span className="w-4 text-center">T</span>
+                         <span className="w-4 text-center">W</span>
+                         <span className="w-4 text-center">T</span>
+                         <span className="w-4 text-center">F</span>
+                         <span className="w-4 text-center">S</span>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                         {month.weeks.map((week, wIdx) => (
+                            <div key={`week-${wIdx}`} className="flex gap-1.5">
+                               {week.map((cell, cIdx) => (
+                                  cell ? (
+                                     <div
+                                        key={cell.date}
+                                        className={`w-4 h-4 rounded-[4px] flex items-center justify-center text-[8px] transition-smooth ${cell.isFuture ? 'opacity-0 pointer-events-none' : `hover:scale-110 cursor-pointer ${getStreakCellClass(cell.count)}`}`}
+                                        onMouseEnter={() => !cell.isFuture && setHoveredCell(cell)}
+                                        onMouseLeave={() => setHoveredCell(null)}
+                                     >
+                                        <span className="opacity-0 hover:opacity-100 mix-blend-color-burn">{cell.dayNumber}</span>
+                                     </div>
+                                  ) : (
+                                     <div key={`empty-${cIdx}`} className="w-4 h-4 bg-transparent" />
+                                  )
+                               ))}
+                            </div>
+                         ))}
+                      </div>
+                   </div>
                 ))}
-              </div>
-
-            <div className="flex gap-3 overflow-x-auto custom-scrollbar pb-2" onMouseMove={handleCellMouseMove}>
-              <div className="flex flex-col justify-between text-[10px] text-text-secondary/80 py-0.5 pr-1 min-w-[24px]">
-                <span>Sun</span>
-                <span>Tue</span>
-                <span>Thu</span>
-                <span>Sat</span>
-              </div>
-              <div className="flex gap-1.5 min-w-max">
-                {yearlyColumns.map((weekCells, idx) => (
-                  <div key={`week-${idx}`} className="flex flex-col gap-1.5">
-                    {weekCells.map((dayCell) => (
-                      <div
-                        key={dayCell.date}
-                        className={`w-3.5 h-3.5 rounded-[4px] transition-smooth hover:scale-110 ${getStreakCellClass(dayCell.count)}`}
-                        onMouseEnter={() => setHoveredCell(dayCell)}
-                        onMouseLeave={() => setHoveredCell(null)}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
             </div>
             </div>
             <div className="mt-3 flex items-center justify-between">

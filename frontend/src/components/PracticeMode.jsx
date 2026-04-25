@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/client';
 
-function PracticeMode() {
+function PracticeMode({ completeSession }) {
   const [topic, setTopic] = useState('Arrays & Hashing');
   const [difficulty, setDifficulty] = useState('Medium');
   const [type, setType] = useState('MCQ');
@@ -26,6 +26,7 @@ function PracticeMode() {
   const [attempted, setAttempted] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('🧠 AI is analyzing your response...');
+  const [sessionRecorded, setSessionRecorded] = useState(false);
 
   const accuracy = attempted > 0 ? Math.round((score / attempted) * 100) : 0;
   const performanceTag = accuracy >= 80 ? 'Excellent' : accuracy >= 50 ? 'Average' : 'Needs Improvement';
@@ -71,7 +72,16 @@ function PracticeMode() {
     setScore(0);
     setAttempted(0);
     setShowSummary(false);
+    setSessionRecorded(false);
     fetchNextQuestion();
+  };
+
+  const finalizePracticeSession = () => {
+    if (!sessionRecorded && attempted > 0) {
+      completeSession?.(Math.round(score * 10), accuracy, topic);
+      setSessionRecorded(true);
+    }
+    setShowSummary(true);
   };
 
   const handleTimeUp = () => {
@@ -141,7 +151,7 @@ function PracticeMode() {
           <button onClick={() => setShowSummary(false)} className="w-full bg-accent-green text-bg-primary font-bold py-3.5 rounded-lg active:scale-[0.98] duration-150 transition-smooth shadow-soft hover:shadow-glow-green">
             Practice Again
           </button>
-          <p className="text-center text-xs text-text-secondary/60 mt-6">Powered by Generative AI • CodePilot AI v2.0</p>
+          <p className="text-center text-xs text-text-secondary/60 mt-6">Powered by Generative AI • PrepPilot AI v2.0</p>
         </div>
       </main>
     )
@@ -206,7 +216,7 @@ function PracticeMode() {
             <span className="material-symbols-outlined">timer</span>
             <span>00:{timeLeft.toString().padStart(2, '0')}</span>
           </div>
-          <button onClick={() => setShowSummary(true)} className="text-sm font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-lg transition-smooth border border-red-500/30">
+          <button onClick={finalizePracticeSession} className="text-sm font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-lg transition-smooth border border-red-500/30">
             End Session
           </button>
         </div>

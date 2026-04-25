@@ -2,7 +2,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 
-const buildFallbackMockQuestion = (role, skills) => {
+const buildFallbackMockQuestion = (role, skills, difficulty = 'Medium', style = 'Standard') => {
   const normalizedSkills = (skills || '')
     .split(',')
     .map((s) => s.trim())
@@ -10,7 +10,14 @@ const buildFallbackMockQuestion = (role, skills) => {
 
   const primarySkill = normalizedSkills[0] || 'problem solving';
 
-  return `Let's begin your mock interview for the ${role} role.\n\nFirst question: Walk me through a project where you used ${primarySkill}. What was the problem, your approach, trade-offs you considered, and the final impact?`;
+  let opening = `Let's begin your mock interview for the ${role} role.`;
+  if (style === 'Hostile') {
+    opening = `Let's get straight to it. We don't have much time. You applied for the ${role} position.`;
+  } else if (style === 'Friendly') {
+    opening = `Welcome! Thanks for taking the time today. Let's do a collaborative session for the ${role} position.`;
+  }
+
+  return `${opening}\n\nFirst question: Walk me through a project where you used ${primarySkill} in a ${difficulty} context. What was the problem, your approach, trade-offs you considered, and the final impact?`;
 };
 
 // Initialize Gemini SDK with API key
@@ -21,39 +28,26 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey || 'uninitialized');
 
-// System instruction requested by user
 const systemInstruction = `You are an expert coding interview coach and evaluator.
 
-You must behave like a real interviewer.
+You must behave like a real interviewer. Keep your replies very short, humanized, and conversational—avoid large walls of text.
 
 Questioning rules:
 - Ask only ONE question at a time.
 - Match difficulty and topic strictly to the provided context.
-- Stay within coding interview domain only.
+- Keep questions brief like a natural spoken conversation.
 
 Evaluation rules:
-- When evaluating an answer, respond using this exact structure:
+- When evaluating an answer, respond using this concise structure:
 
-Result: Correct / Partially Correct / Incorrect
-
-Feedback:
-- Explain what is right/wrong
-- Suggest improvement
-
-Optimal Approach:
-- Give better approach (if needed)
-
-Complexity:
-- Time Complexity: ...
-- Space Complexity: ...
-
-Next Step:
-- Ask one follow-up question OR one next question
+Result: Correct / partially correct / incorrect
+Feedback: (1-2 very short, conversational sentences explaining why and how to improve)
+Next Step: (Ask the next question shortly)
 
 Tone rules:
 - Be strict but encouraging.
-- Keep answers clean, structured, and concise.
-- Do not go out of interview scope.`;
+- Talk like a human interviewer.
+- Do not output large technical monologues unless specifically asked for the optimal approach.`;
 
 const handleChat = async (req, res) => {
   try {
@@ -133,7 +127,7 @@ Do:
 
 const handleMockInit = async (req, res) => {
   try {
-    const { role, skills, resume } = req.body;
+    const { role, skills, resume, difficulty = 'Medium', interviewerStyle = 'Standard' } = req.body;
     let resumeText = resume || '';
 
     // If a file was uploaded, extract its text based on mime type or extension
@@ -175,24 +169,39 @@ const handleMockInit = async (req, res) => {
 Candidate details:
 Role: ${role}
 Skills: ${skills}
+Difficulty Level: ${difficulty}
+Interviewer Persona: ${interviewerStyle}
 Resume:
 ${resumeText}
 
 Start a mock interview:
-- Ask the first question based on resume/projects
-- Focus on role and skills
-- Ask ONLY ONE question
-- DO NOT INCLUDE ANY SCORE TAG FOR THE VERY FIRST QUESTION`;
+- Adopt the ${interviewerStyle} persona (e.g., if Hostile, act rushed and highly critical; if Friendly, act supportive; if Standard, act analytical).
+- Keep your introduction extremely short, natural, and conversational (1-2 sentences max).
+- Ask a ${difficulty} difficulty first question based strictly on the resume/projects and role.
+- Ask ONLY ONE question.
+- DO NOT INCLUDE ANY SCORE/RESULT TAG FOR THE VERY FIRST QUESTION. Keep it conversational.`;
 
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-      const result = await model.generateContent(prompt);
+      let result;
       
-      return res.status(200).json({ reply: result.response.text() });
+      try {
+        result = await model.generateContent(prompt);
+      } catch(err) {
+        if (err.status === 429) {
+          console.warn("Rate limited by Google API. Retrying after 4 seconds...");
+          await new Promise(r => setTimeout(r, 4000));
+          result = await model.generateContent(prompt);
+        } else {
+          throw err;
+        }
+      }
+      
+      return res.status(200).json({ reply: result.response.text(), fallback: false });
     } catch (geminiError) {
-      console.error('Gemini failed for /mock, using fallback question:', geminiError);
+      console.error('Gemini failed for /mock, using fallback question:', geminiError?.message || geminiError);
       return res.status(200).json({
-        reply: buildFallbackMockQuestion(role, skills),
+        reply: buildFallbackMockQuestion(role, skills, difficulty, interviewerStyle),
         fallback: true
       });
     }
