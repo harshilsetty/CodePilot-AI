@@ -15,6 +15,8 @@ This guide deploys CodePilot AI so it is accessible from anywhere.
 4. Render reads `render.yaml` and creates service `codepilot-ai-backend`.
 5. Set required environment variables in Render:
    - GEMINI_API_KEY
+   - GOOGLE_CLIENT_ID
+   - GOOGLE_CLIENT_IDS (optional, comma-separated)
    - JWT_SECRET
    - CORS_ORIGINS (set to frontend URL after Vercel deploy)
 6. Deploy and copy backend URL (example: `https://codepilot-ai-backend.onrender.com`).
@@ -31,8 +33,20 @@ This guide deploys CodePilot AI so it is accessible from anywhere.
 2. Set project root to `frontend`.
 3. Framework preset: Vite.
 4. Add environment variable:
+   - `VITE_GOOGLE_CLIENT_ID=<your-google-web-client-id>`
    - `VITE_API_BASE_URL=https://<your-render-backend-url>`
 5. Deploy and copy frontend URL.
+
+## 2.1 Configure Google OAuth (Required for Vercel)
+1. Open Google Cloud Console > APIs & Services > Credentials.
+2. Edit your OAuth 2.0 Client ID (Web application).
+3. Add JavaScript origins:
+   - `http://localhost:5173`
+   - `https://<your-vercel-frontend-url>`
+4. If you use Vercel previews, also add each preview domain you test from.
+5. Save changes and redeploy frontend after env updates.
+6. Ensure backend `GOOGLE_CLIENT_ID` exactly matches frontend `VITE_GOOGLE_CLIENT_ID`.
+7. If you use different client IDs for environments, set backend `GOOGLE_CLIENT_IDS` to a comma-separated allowlist.
 
 ## 3. Configure Backend CORS
 Set Render env var:

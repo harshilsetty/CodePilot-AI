@@ -3,19 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const chatRoutes = require('./routes/chatRoutes');
 const authRoutes = require('./routes/authRoutes');
-const { validateEmailConfig } = require('./utils/mailer');
 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-try {
-  validateEmailConfig();
-} catch (error) {
-  console.error('Startup config error:', error.message);
-  console.error('Please configure SMTP settings in backend/.env before starting the server.');
-  process.exit(1);
-}
 
 const allowedOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')

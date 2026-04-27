@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const isLocalDevHost = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const fallbackBaseUrl = isLocalDevHost ? 'http://localhost:3000' : '';
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+  baseURL: configuredBaseUrl || fallbackBaseUrl,
 });
 
 apiClient.interceptors.request.use((config) => {

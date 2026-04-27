@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const { getUsers, saveUsers } = require('../utils/userStore');
-const { sendSignupOtpEmail } = require('../utils/mailer');
+const { sendSignupOtpEmail, validateEmailConfig } = require('../utils/mailer');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
@@ -13,6 +13,10 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_REGEX = /^\d{6}$/;
 
 const pendingRegistrations = new Map();
+const googleAudiences = (process.env.GOOGLE_CLIENT_IDS || process.env.GOOGLE_CLIENT_ID || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 const sanitizeUser = (user) => ({
   id: user.id,
@@ -44,6 +48,14 @@ const isOtpExpired = (entry) => !entry || Date.now() > entry.expiresAt;
 
 const register = async (req, res) => {
   try {
+    try {
+      validateEmailConfig();
+    } catch (configError) {
+      return res.status(503).json({
+        error: 'Signup OTP email service is not configured on server. Configure SMTP or use Google sign-in.',
+      });
+    }
+
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '').trim();
     const displayName = String(req.body?.displayName || '').trim();
@@ -182,15 +194,21 @@ const googleLogin = async (req, res) => {
       return res.status(400).json({ error: 'Google token is required.' });
     }
 
+    if (googleAudiences.length === 0) {
+      return res.status(500).json({ error: 'Google auth is not configured on server.' });
+    }
+
     let ticket;
     try {
       ticket = await googleClient.verifyIdToken({
         idToken: googleToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
+        audience: googleAudiences,
       });
     } catch (err) {
       console.error('Google token verification failed:', err);
-      return res.status(401).json({ error: 'Invalid Google token.' });
+      return res.status(401).json({
+        error: 'Invalid Google token or OAuth client ID mismatch.',
+      });
     }
 
     const payload = ticket.getPayload();

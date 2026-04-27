@@ -25,6 +25,11 @@ function LoginPage({ onLogin }) {
     setIsSubmitting(true);
     setError('');
     try {
+      if (!credentialResponse?.credential) {
+        setError('Google did not return a credential. Please try again.');
+        return;
+      }
+
       const { data } = await apiClient.post('/api/auth/google-login', {
         token: credentialResponse.credential,
       });
@@ -33,7 +38,13 @@ function LoginPage({ onLogin }) {
       onLogin(data.user);
     } catch (err) {
       const backendError = err?.response?.data?.error;
-      setError(backendError || 'Google authentication failed. Please try again.');
+      if (backendError) {
+        setError(backendError);
+      } else if (err?.code === 'ERR_NETWORK') {
+        setError('Cannot reach backend. Check API base URL and backend CORS settings.');
+      } else {
+        setError(err?.message || 'Google authentication failed. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -129,7 +140,13 @@ function LoginPage({ onLogin }) {
       onLogin(data.user);
     } catch (err) {
       const backendError = err?.response?.data?.error;
-      setError(backendError || 'Authentication failed. Please try again.');
+      if (backendError) {
+        setError(backendError);
+      } else if (err?.code === 'ERR_NETWORK') {
+        setError('Cannot reach backend. Check API base URL and backend CORS settings.');
+      } else {
+        setError(err?.message || 'Authentication failed. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
